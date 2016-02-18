@@ -1,11 +1,10 @@
 QDK in Docker
-============================================
-(Based on QDK 2.2.8 SW5 Modified Version)
----------------------------------------
+==============
+### (Based on QDK 2.2.8 SW5 Modified Version)
 
 
 Usage
----------------------------------------
+----------
 ```
 $ cd my_project
 $ docker run -it --rm -v ${PWD}:/my_project mrmoneyc/sw5-docker-qdk bash -c "cd /my_project; qbuild"
@@ -17,5 +16,5 @@ A QPKG was created in `my_project/build/my_project_1.0.0__20160216.qpkg`. You ca
 
 
 Reference
----------------------------------------
+----------
 [docker-qdk2](https://github.com/fcwu/docker-qdk2)
