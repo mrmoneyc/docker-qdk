@@ -3,7 +3,7 @@ stages:
 Build:
   stage: build
   script:
-    - docker build -t docker-qdk .
+    - docker build -t sw5-docker-qdk .
   only:
     - master
   tags:
