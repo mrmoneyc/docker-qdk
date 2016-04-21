@@ -420,6 +420,7 @@ init_share_settings(){
 ##################################################################
 assign_base(){
 	SYS_QPKG_INSTALL_PATH="$(dirname ${PWD})"
+	echo ${SYS_QPKG_INSTALL_PATH} > /tmp/QPKG_INSTALL_PATH
 	SYS_QPKG_DIR="$SYS_QPKG_INSTALL_PATH/$QPKG_NAME"
 }
 
