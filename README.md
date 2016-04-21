@@ -18,7 +18,9 @@ A QPKG was created in `my_project/build/my_project_1.0.0__20160216.qpkg`. You ca
 What's new
 ----------
 New parameters for qbuild
+
 --allow-no-volume
+
 --build-branch BRANCH_NAME
 
 
