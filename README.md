@@ -1,6 +1,6 @@
 QDK in Docker
 ==============
-### (Based on QDK 2.2.8.1 SW5 Modified Version)
+### (Based on QDK 2.2.13 SW5 Modified Version)
 
 
 Usage
@@ -13,6 +13,13 @@ $ ls -l ./build/*.qpkg
 ```
 
 A QPKG was created in `my_project/build/my_project_1.0.0__20160216.qpkg`. You can manually install it in App Center.
+
+
+What's new
+----------
+New parameters for qbuild
+--allow-no-volume
+--build-branch BRANCH_NAME
 
 
 Reference
