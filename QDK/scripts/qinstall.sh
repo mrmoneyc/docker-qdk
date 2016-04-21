@@ -58,6 +58,7 @@ CMD_WLOG="/sbin/write_log"
 CMD_XARGS="/usr/bin/xargs"
 CMD_7Z="/usr/local/sbin/7z"
 
+
 ##### System definitions #####
 SYS_EXTRACT_DIR="$(pwd)"
 SYS_CONFIG_DIR="/etc/config"
@@ -71,6 +72,7 @@ SYS_QPKG_DATA_FILE_7ZIP="./data.tar.7z"
 SYS_QPKG_DATA_CONFIG_FILE="./conf.tar.gz"
 SYS_QPKG_DATA_MD5SUM_FILE="./md5sum"
 SYS_QPKG_DATA_BUILTVER_FILE="./built_version"
+SYS_QPKG_DATA_BUILTINFO_FILE="./built_info"
 SYS_QPKG_DATA_PACKAGES_FILE="./Packages.gz"
 SYS_QPKG_CONFIG_FILE="$SYS_CONFIG_DIR/qpkg.conf"
 SYS_QPKG_CONF_FIELD_QPKGFILE="QPKG_File"
@@ -88,19 +90,16 @@ SYS_QPKG_CONF_FIELD_WEB_SSL_PORT="Web_SSL_Port"
 SYS_QPKG_CONF_FIELD_SERVICEPORT="Service_Port"
 SYS_QPKG_CONF_FIELD_SERVICE_PIDFILE="Pid_File"
 SYS_QPKG_CONF_FIELD_AUTHOR="Author"
-SYS_QPKG_CONF_FIELD_RC_NUMBER="RC_Number"
-
-# -----------------------------------------
-# add by Aaron Liu
-# -----------------------------------------
-SYS_QPKG_CONF_FIELD_USEPROXY="Use_Proxy"
-SYS_QPKG_CONF_FIELD_VISIBLE="Visible"
 SYS_QPKG_CONF_FIELD_SYSAPP="Sys_App"
-# -----------------------------------------
-
+SYS_QPKG_CONF_FIELD_RC_NUMBER="RC_Number"
+SYS_QPKG_CONF_FIELD_VOLUME_SELECT="Volume_Select"
 SYS_QPKG_CONF_FIELD_DESKTOPAPP="Desktop"
 SYS_QPKG_CONF_FIELD_DESKTOPAPP_WIN_WIDTH="Win_Width"
 SYS_QPKG_CONF_FIELD_DESKTOPAPP_WIN_HEIGHT="Win_Height"
+SYS_QPKG_CONF_FIELD_USE_PROXY="Use_Proxy"
+SYS_QPKG_CONF_FIELD_PROXY_PATH="Proxy_Path"
+SYS_QPKG_CONF_FIELD_TIMEOUT="Timeout"
+SYS_QPKG_CONF_FIELD_VISIBLE="Visible"
 # The following variables are assigned values at run-time.
 SYS_HOSTNAME=$($CMD_HOSTNAME)
 # Data file name (one of SYS_QPKG_DATA_FILE_GZIP, SYS_QPKG_DATA_FILE_BZIP2,
@@ -300,6 +299,18 @@ store_built_version(){
 	$CMD_SED -i "/\[$QPKG_NAME\]/,/^\[/{/^^buildVer:/d}" $SYS_QPKG_CONFIG_FILE 2>/dev/null
 }
 
+############################
+# Store built information
+############################
+store_built_information(){
+	local built_time=
+
+	if [ -f $SYS_QPKG_DATA_BUILTINFO_FILE ]; then
+		built_time=$($CMD_GETCFG "" "time" -f $SYS_QPKG_DATA_BUILTINFO_FILE)
+		set_qpkg_field "Build" "$built_time"
+	fi
+}
+
 #####################################################################
 # Add given configuration file and md5sum to SYS_QPKG_CONFIG_FILE if
 # not already added.
@@ -332,17 +343,18 @@ remove_file_and_empty_dir(){
 		$CMD_RMDIR "$file" 2>/dev/null
 	fi
 }
+
 #############################
 # Check QTS minimum version.
 #############################
 check_qts_version(){
 	NOW_VERSION=`/sbin/getcfg System Version -f /etc/config/uLinux.conf|cut -c 1,3,5`
-	MINI_VERSION=`echo "$QTS_MINI_VERSION"|cut -c 1,3,5`
+    MINI_VERSION=`echo "$QTS_MINI_VERSION"|cut -c 1,3,5`
 	if [ ${MINI_VERSION} -gt ${NOW_VERSION} ]; then
-                err_log "Error Firmware version, please upgrade to QTS ${QTS_MINI_VERSION} or newer version."
-        else
-                echo "Firmware check is fine."
-        fi 	
+		err_log "Error Firmware version, please upgrade to QTS ${QTS_MINI_VERSION} or newer version."
+	else
+	    echo "Firmware check is fine."
+	fi
 }
 
 ################################################################
@@ -407,38 +419,7 @@ init_share_settings(){
 # Determine BASE installation location and assign to SYS_QPKG_DIR
 ##################################################################
 assign_base(){
-	local base=""
-	if [ -n "$SYS_PUBLIC_PATH" ] && [ -d "$SYS_PUBLIC_PATH" ]; then
-		local dirp1=$($CMD_ECHO $SYS_PUBLIC_PATH | $CMD_CUT -d "/" -f 2)
-		local dirp2=$($CMD_ECHO $SYS_PUBLIC_PATH | $CMD_CUT -d "/" -f 3)
-		local dirp3=$($CMD_ECHO $SYS_PUBLIC_PATH | $CMD_CUT -d "/" -f 4)
-		[ -n "$dirp1" ] && [ -n "$dirp2" ] && [ -n "$dirp3" ] &&
-			[ -d "/$dirp1/$dirp2/$SYS_PUBLIC_SHARE" ] && base="/$dirp1/$dirp2"
-	fi
-	
-	# Determine BASE location by checking where the directory is.
-	if [ -z "$base" ]; then
-		for datadirtest in /share/HDA_DATA /share/HDB_DATA /share/HDC_DATA \
-				   /share/HDD_DATA /share/HDE_DATA /share/HDF_DATA \
-				   /share/HDG_DATA /share/HDH_DATA /share/MD0_DATA \
-				   /share/MD1_DATA /share/MD2_DATA /share/MD3_DATA
-		do
-			[ -d "$datadirtest/$SYS_PUBLIC_SHARE" ] && base="$datadirtest"
-		done
-	fi
-
-	# -----------------------------------------
-	# If there are no volumn to install the QPKG, try to install in the /mnt/HDA_ROOT/update_pkg
-	# modified by Aaron Liu, 2016/02/15
-	# -----------------------------------------
-	if [ -z "$base" ] ; then
-		base="/mnt/HDA_ROOT/update_pkg"
-	fi
-	if [ -z "$base" ] ; then
-		err_log "$SYS_MSG_PUBLIC_NOT_FOUND"
-	fi
-	SYS_QPKG_BASE="$base"
-	SYS_QPKG_INSTALL_PATH="$SYS_QPKG_BASE/.qpkg"
+	SYS_QPKG_INSTALL_PATH="$(dirname ${PWD})"
 	SYS_QPKG_DIR="$SYS_QPKG_INSTALL_PATH/$QPKG_NAME"
 }
 
@@ -564,29 +545,11 @@ set_qpkg_web_port(){
 		[ -n "$QPKG_WEBUI" ] || set_qpkg_field $SYS_QPKG_CONF_FIELD_WEBUI "/"
 	fi
 }
-
-# -----------------------------------------
-# add by Aaron Liu
-# -----------------------------------------
-set_qpkg_use_proxy(){
-	if [ -n "$QPKG_USE_PROXY" ]; then
-		set_qpkg_field $SYS_QPKG_CONF_FIELD_USEPROXY "$QPKG_USE_PROXY"
+set_qpkg_volume_select(){
+	if [ -n "$QPKG_VOLUME_SELECT" ]; then
+		set_qpkg_field $SYS_QPKG_CONF_FIELD_VOLUME_SELECT "$QPKG_VOLUME_SELECT"
 	fi
 }
-
-set_qpkg_visible(){
-	if [ -n "$QPKG_VISIBLE" ]; then
-		set_qpkg_field $SYS_QPKG_CONF_FIELD_VISIBLE "$QPKG_VISIBLE"
-	fi
-}
-
-set_qpkg_sysapp(){
-	if [ -n "$QPKG_SYS_APP" ]; then
-		set_qpkg_field $SYS_QPKG_CONF_FIELD_SYSAPP "$QPKG_SYS_APP"
-	fi
-}
-# -----------------------------------------
-
 set_qpkg_web_ssl_port(){
         if [ -n "$QPKG_WEB_SSL_PORT" ]; then
                 set_qpkg_field $SYS_QPKG_CONF_FIELD_WEB_SSL_PORT "$QPKG_WEB_SSL_PORT"
@@ -608,6 +571,11 @@ set_qpkg_config(){
 
 	set_qpkg_field "cfg:$file" "$md5sum"
 }
+set_qpkg_sys_app(){
+	if [ -n "$QPKG_SYS_APP" ]; then
+		set_qpkg_field $SYS_QPKG_CONF_FIELD_SYSAPP "$QPKG_SYS_APP"
+	fi
+}
 set_qpkg_rc_number(){
 	[ -z "$QPKG_RC_NUM" ] || set_qpkg_field $SYS_QPKG_CONF_FIELD_RC_NUMBER "$QPKG_RC_NUM"
 }
@@ -622,7 +590,26 @@ set_qpkg_desktop_app(){
 		set_qpkg_field $SYS_QPKG_CONF_FIELD_DESKTOPAPP_WIN_HEIGHT "$QPKG_DESKTOP_APP_WIN_HEIGHT"
 	fi
 }
-
+set_qpkg_use_proxy(){
+	if [ -n "$QPKG_USE_PROXY" ]; then
+		set_qpkg_field $SYS_QPKG_CONF_FIELD_USE_PROXY "$QPKG_USE_PROXY"
+	fi
+}
+set_qpkg_proxy_path(){
+	if [ -n "$QPKG_PROXY_PATH" ]; then
+		set_qpkg_field $SYS_QPKG_CONF_FIELD_PROXY_PATH "$QPKG_PROXY_PATH"
+	fi
+}
+set_qpkg_timeout(){
+	if [ -n "$QPKG_TIMEOUT" ]; then
+		set_qpkg_field $SYS_QPKG_CONF_FIELD_TIMEOUT "$QPKG_TIMEOUT"
+	fi
+}
+set_qpkg_visible(){
+	if [ -n "$QPKG_VISIBLE" ]; then
+		set_qpkg_field $SYS_QPKG_CONF_FIELD_VISIBLE "$QPKG_VISIBLE"
+	fi
+}
 
 
 ############################################################
@@ -648,6 +635,7 @@ register_qpkg(){
 	set_qpkg_install_date
 	set_qpkg_service_path
 	set_qpkg_service_port
+	set_qpkg_volume_select
 	set_qpkg_service_pid
 	set_qpkg_install_path
 	set_qpkg_config_path
@@ -655,16 +643,12 @@ register_qpkg(){
 	set_qpkg_web_port
 	set_qpkg_web_ssl_port
 	set_qpkg_rc_number
+	set_qpkg_sys_app
 	set_qpkg_desktop_app
-
-	# -----------------------------------------
-	# add by Aaron Liu
-	# -----------------------------------------
 	set_qpkg_use_proxy
+	set_qpkg_proxy_path
+	set_qpkg_timeout
 	set_qpkg_visible
-	set_qpkg_sysapp
-	# -----------------------------------------
-	
 }
 
 ##################
@@ -1185,6 +1169,8 @@ pre_install(){
 	fi
 
 	store_config
+	store_built_version
+	store_built_information
 	get_qpkg_status
 	stop_service
 
@@ -1257,9 +1243,9 @@ main(){
 	##system pop up log when QPKG has installed 
 
 	if [ -n "$QPKG_DISPLAY_NAME" ]; then
-		log "[App Center] ${QPKG_DISPLAY_NAME} ${QPKG_VER} installation succeeded."   
+		log "[App Center] ${QPKG_DISPLAY_NAME} ${QPKG_VER} has been installed in $SYS_QPKG_DIR successfully."   
 	else
-		log "[App Center] $QPKG_NAME ${QPKG_VER} installation succeeded."
+		log "[App Center] $QPKG_NAME ${QPKG_VER} has been installed in $SYS_QPKG_DIR successfully."
 	fi
 
 	##system pop up log after QPKG has installed and app was enable
