@@ -654,8 +654,22 @@ add_qpkg_header(){
              fi
 	        return 0
 	else
-		$log_tool "QTS system volume not found."
-		exit
+		# -------------------------------------------------------
+		# Update by Aaron Liu 2016/4/21
+		# -------------------------------------------------------
+		if [ ${QDK_ALLOW_NO_VOLUME} = 1 ]; then
+			if [ -d "/mnt/HDA_ROOT/update_pkg" ]; then
+				QPKG_INSTALL_PATH="/mnt/HDA_ROOT/update_pkg"
+                QPKG_DIR="\${QINSTALL_PATH}/\${QPKG_NAME}"
+			else
+				$log_tool "QTS system volume not found."
+				exit
+			fi
+		else
+			$log_tool "QTS system volume not found."
+			exit
+		fi
+		# -------------------------------------------------------
 	fi
 	}
 	EOF
@@ -845,7 +859,14 @@ create_qpkg(){
 	# Model is _ARCH or empty for generic packages
 	local arch="$1"
 	local model="${arch:+_$arch}"
+
+	# -------------------------------------------------------
+	# Update by Aaron Liu 2016-04-21
+	# -------------------------------------------------------
 	local branch="_$QDK_BUILD_BRANCH"
+	# -------------------------------------------------------
+
+	
 	local release="${QPKG_RELEASE:+-$QPKG_RELEASE}"
 	local today=_$(date +"%Y%m%d")
 	today="_${today}"
@@ -858,16 +879,25 @@ create_qpkg(){
 		model=""
 	fi
 
+	# -------------------------------------------------------
+	# Update by Aaron Liu 2016-04-21
+	# -------------------------------------------------------
 	if [ "${branch}" == "_" ]; then
 		branch=""
 	fi
+	# -------------------------------------------------------
+
 
 	msg "Creating QPKG package..."
 
 	/bin/mkdir -m 755 -p "${QDK_BUILD_DIR:=build}" || err_msg "$QDK_BUILD_DIR: failed to create directory"
 
 
+	# -------------------------------------------------------
+	# Update by Aaron Liu 2016-04-21
+	# -------------------------------------------------------
 	QDK_QPKG_FILE=${QDK_QPKG_FILE:-${QPKG_NAME}_${QPKG_VER}${release}${branch}${model}${today}.qpkg}
+	# -------------------------------------------------------
 	msg "QPKG File: ${QDK_QPKG_FILE}"
 	verbose_msg "QPKG package name set to $QDK_QPKG_FILE"
 
@@ -1425,6 +1455,10 @@ usage: $(/usr/bin/basename $0) [--extract QPKG [DIR]] [--create-env NAME] [-s|--
 --build-dir BUILD_DIR
 	Place built QPKG in BUILD_DIR. If a full path is not specified then it
 	is relative to the ROOT_DIR (default is ROOT_DIR/build).
+--build-branch BRANCH_NAME
+	Attach branch name on the qpkg file name.
+--allow-no-volume
+	Allow qpkg install without volume. The default path is /mnt/HDA_ROOT/update_pkg when the volume can not be found.
 --setup SCRIPT
 	Run specified script to setup build environment. Called once before
 	build process is initiated.
@@ -1526,6 +1560,7 @@ main(){
 	QDK_CONTROL_FILE="${QDK_CONTROL_FILE:-control.tar}"
 	QDK_COMPRESS_FILE="${QDK_COMPRESS_FILE:-data.tar.gz}"
 	QDK_GPG_PUBKEYRING="${QDK_GPG_PUBKEYRING:-/etc/config/qpkg.gpg}"
+	QDK_ALLOW_NO_VOLUME=0
 
 	[ -n "$QDK_GPG_KEYPATH" ] && export GNUPGHOME="$QDK_GPG_KEYPATH"
 
@@ -1598,6 +1633,8 @@ main(){
 		--build-branch)	QDK_BUILD_BRANCH="$2"
 				[ -n "$QDK_BUILD_BRANCH" ] || err_msg "--build-branch: no branch name"
 				shift
+				;;
+		--allow-no-volume) QDK_ALLOW_NO_VOLUME=1
 				;;
 		--build-arch)	local arch="$2"
 				[ -n "$arch" ] || err_msg "--build-arch: no architecture"
