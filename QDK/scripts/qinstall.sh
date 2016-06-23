@@ -209,13 +209,15 @@ extract_data(){
 	local root_dir="${2:-$SYS_QPKG_DIR}"
 	case "$archive" in
 	*.gz|*.bz2)
-		$CMD_TAR xvf "$archive" -C "$root_dir" 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
+		# $CMD_TAR xvf "$archive" -C "$root_dir" 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
+		$CMD_TAR xvf "$archive" -C "$root_dir" 2>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"; echo "qinstall.sh Line#213" >> /mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log
 		;;
 	*.7z)
-		$CMD_7Z x -so "$archive" 2>/dev/null | $CMD_TAR xv -C "$root_dir" 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
+		# $CMD_7Z x -so "$archive" 2>/dev/null | $CMD_TAR xv -C "$root_dir" 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
+		$CMD_7Z x -so "$archive" 2>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log | $CMD_TAR xv -C "$root_dir" 2>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"; echo "qinstall.sh Line#217" >> /mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log
 		;;
 	*)
-		err_log "$SYS_MSG_FILE_ERROR"
+		err_log "$SYS_MSG_FILE_ERROR"; echo "qinstall.sh Line#220" >> /mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log
 	esac
 }
 
@@ -224,7 +226,8 @@ extract_data(){
 #############################
 extract_config(){
 	if [ -f $SYS_QPKG_DATA_CONFIG_FILE ]; then
-		$CMD_TAR xvf $SYS_QPKG_DATA_CONFIG_FILE -C / 2>/dev/null | $CMD_SED 's/\.//' 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
+		# $CMD_TAR xvf $SYS_QPKG_DATA_CONFIG_FILE -C / 2>/dev/null | $CMD_SED 's/\.//' 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
+		$CMD_TAR xvf $SYS_QPKG_DATA_CONFIG_FILE -C / 2>/dev/null | $CMD_SED 's/\.//' 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"; echo "qinstall.sh Line#230" >> /mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log
 	fi
 }
 
@@ -389,7 +392,7 @@ get_share_path(){
 	local share="$1"
 	local path="$2"
 
-	# Get location from smb.conf	
+	# Get location from smb.conf
 	local location=$($CMD_GETCFG "$share" path -f $SYS_CONFIG_DIR/smb.conf)
 
 	[ -n "$location" ] || return 1
@@ -964,7 +967,7 @@ append_install_msg(){
 	fi
 }
 append_remove_msg(){
-	if [ -n "$1" ]; then 
+	if [ -n "$1" ]; then
 		if $CMD_EXPR "$1" : "QNAP_FW" >/dev/null; then
 			fw_remove_msg="${fw_remove_msg}${fw_remove_msg:+, }$1 $2 $3"
 		elif $CMD_EXPR "$1" : "OPT/.*" >/dev/null; then
@@ -1010,7 +1013,7 @@ check_requirements(){
 				statusOK="TRUE"
 				is_qpkg_enabled "$qpkg" $op $version && break
 				statusOK="FALSE"
-			done 
+			done
 			[ "$statusOK" = "TRUE" ] || append_install_msg "${require## }"
 		done
 	fi
@@ -1084,7 +1087,7 @@ create_uninstall_script(){
 	# Remove QPKG directory, init-scripts, and icons.
 	$CMD_RM -fr "$SYS_QPKG_DIR"
 	$CMD_RM -f "$SYS_INIT_DIR/$QPKG_SERVICE_PROGRAM"
-	$CMD_FIND $SYS_STARTUP_DIR -type l -name 'QS*${QPKG_NAME}' | $CMD_XARGS $CMD_RM -f 
+	$CMD_FIND $SYS_STARTUP_DIR -type l -name 'QS*${QPKG_NAME}' | $CMD_XARGS $CMD_RM -f
 	$CMD_FIND $SYS_SHUTDOWN_DIR -type l -name 'QK*${QPKG_NAME}' | $CMD_XARGS $CMD_RM -f
 	$CMD_RM -f "$SYS_RSS_IMG_DIR/${QPKG_NAME}.gif"
 	$CMD_RM -f "$SYS_RSS_IMG_DIR/${QPKG_NAME}_80.gif"
@@ -1178,7 +1181,7 @@ pre_install(){
 	$CMD_MKDIR -p $SYS_QPKG_DIR
 
 	# Package specific routines as defined in package_routines.
-	call_defined_routine pkg_pre_install 
+	call_defined_routine pkg_pre_install
 }
 
 ##################################
@@ -1241,10 +1244,10 @@ main(){
 
 	$CMD_SYNC
 
-	##system pop up log when QPKG has installed 
+	##system pop up log when QPKG has installed
 
 	if [ -n "$QPKG_DISPLAY_NAME" ]; then
-		log "[App Center] ${QPKG_DISPLAY_NAME} ${QPKG_VER} has been installed in $SYS_QPKG_DIR successfully."   
+		log "[App Center] ${QPKG_DISPLAY_NAME} ${QPKG_VER} has been installed in $SYS_QPKG_DIR successfully."
 	else
 		log "[App Center] $QPKG_NAME ${QPKG_VER} has been installed in $SYS_QPKG_DIR successfully."
 	fi
@@ -1252,7 +1255,7 @@ main(){
 	##system pop up log after QPKG has installed and app was enable
 
 	if [ -n "$QPKG_DISPLAY_NAME" ]; then
-		log "[App Center] $QPKG_DISPLAY_NAME enabled."   
+		log "[App Center] $QPKG_DISPLAY_NAME enabled."
 	else
 		log "[App Center] $QPKG_NAME enabled."
 	fi
