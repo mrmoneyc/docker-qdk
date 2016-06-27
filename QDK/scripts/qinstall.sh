@@ -209,15 +209,13 @@ extract_data(){
 	local root_dir="${2:-$SYS_QPKG_DIR}"
 	case "$archive" in
 	*.gz|*.bz2)
-		# $CMD_TAR xvf "$archive" -C "$root_dir" 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
-		$CMD_TAR xvf "$archive" -C "$root_dir" 2>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"; echo "qinstall.sh Line#213" >> /mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log
+		$CMD_TAR xvf "$archive" -C "$root_dir" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
 		;;
 	*.7z)
-		# $CMD_7Z x -so "$archive" 2>/dev/null | $CMD_TAR xv -C "$root_dir" 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
-		$CMD_7Z x -so "$archive" 2>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log | $CMD_TAR xv -C "$root_dir" 2>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"; echo "qinstall.sh Line#217" >> /mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log
+		$CMD_7Z x -so "$archive" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log | $CMD_TAR xv -C "$root_dir" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
 		;;
 	*)
-		err_log "$SYS_MSG_FILE_ERROR"; echo "qinstall.sh Line#220" >> /mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log
+		err_log "$SYS_MSG_FILE_ERROR"
 	esac
 }
 
