@@ -630,7 +630,7 @@ add_qpkg_header(){
 	                        [ -d "/\${publicdirp1}/\${publicdirp2}/Public" ] && QPKG_BASE="/\${publicdirp1}/\${publicdirp2}"
 	                fi
 	        fi
-	
+
 	        # Determine BASE installation location by checking where the Public folder is.
 	        if [ -z \$QPKG_BASE ]; then
 	                for datadirtest in \$BASE_GROUP; do
@@ -643,10 +643,12 @@ add_qpkg_header(){
 	        fi
 	        	QPKG_INSTALL_PATH="\${QPKG_BASE}/.qpkg"
 	        	QPKG_DIR="\${QPKG_INSTALL_PATH}/\${QPKG_NAME}"
+                _EXTRACT_DIR="\$QPKG_INSTALL_PATH/.tmp"
 		else
 		if [ -e "\$QINSTALL_PATH" ]; then
                 	QPKG_INSTALL_PATH="\${QINSTALL_PATH}"
                 	QPKG_DIR="\${QINSTALL_PATH}/\${QPKG_NAME}"
+                    _EXTRACT_DIR="\$QPKG_INSTALL_PATH/.tmp"
 		else
 			$log_tool "QTS application install volume not found."
 			exit
@@ -657,12 +659,13 @@ add_qpkg_header(){
 		# -------------------------------------------------------
 		# Update by Aaron Liu 2016/4/21
 		# -------------------------------------------------------
-		if [ ${QDK_ALLOW_NO_VOLUME} = 1 ]; then
-			if [ -d "/mnt/HDA_ROOT/update_pkg" ]; then
-				QPKG_INSTALL_PATH="/mnt/HDA_ROOT/update_pkg"
+        if [ ${QDK_ALLOW_NO_VOLUME} = 1 ]; then
+            if [ -d "/mnt/HDA_ROOT/update_pkg" ]; then
+                QPKG_INSTALL_PATH="/mnt/HDA_ROOT/update_pkg"
                 QPKG_DIR="\${QINSTALL_PATH}/\${QPKG_NAME}"
-			else
-				$log_tool "QTS system volume not found."
+                _EXTRACT_DIR="/tmp/$QPKG_NAME"
+            else
+                $log_tool "QTS system volume not found."
 				exit
 			fi
 		else
@@ -683,7 +686,7 @@ add_qpkg_header(){
 		}
 		arch_ok(){
 			 local cpu_arch=\$(/bin/uname -m)
-			 local reject_platform=\$(/sbin/getcfg "" Platform -f /etc/platform.conf) 
+			 local reject_platform=\$(/sbin/getcfg "" Platform -f /etc/platform.conf)
 			if [ \$(/usr/bin/expr match "\$reject_platform" "$reject_platform") == 0 ]; then
 				[ \$(/usr/bin/expr match "\$cpu_arch" "$cpu_arch") -ne 0 ] || return 1
 			else return 1
@@ -705,7 +708,6 @@ add_qpkg_header(){
 
 	/bin/cat >>$QDK_QPKG_FILE <<-EOF
 	find_base
-	_EXTRACT_DIR="\$QPKG_INSTALL_PATH/.tmp"
 	/bin/mkdir -p \$_EXTRACT_DIR || exit 1
 	script_len=SCRIPT_LEN
 	/bin/dd if="\${0}" bs=\$script_len skip=1 | /bin/tar -xO | /bin/tar -xzv -C \$_EXTRACT_DIR || exit 1
@@ -722,6 +724,7 @@ add_qpkg_header(){
 
 	/bin/cat >>$QDK_QPKG_FILE <<-EOF
 	( cd \$_EXTRACT_DIR && /bin/sh ${QDK_INSTALL_SCRIPT##*/} || echo "Installation Abort." )
+	/bin/echo "Remove QPKG extract directory..." \$_EXTRACT_DIR
 	/bin/rm -fr \$_EXTRACT_DIR && exit $retval
 	exit 1
 	EOF
@@ -866,7 +869,7 @@ create_qpkg(){
 	local branch="_$QDK_BUILD_BRANCH"
 	# -------------------------------------------------------
 
-	
+
 	local release="${QPKG_RELEASE:+-$QPKG_RELEASE}"
 	local today=_$(date +"%Y%m%d")
 	today="_${today}"
@@ -1053,7 +1056,7 @@ truncate_qpkg_name(){
 		warn_msg "QPKG_NAME: the length of $QPKG_NAME must be less than or equal to $max_qpkg_name_len; name truncated."
 		QPKG_NAME=$(/usr/bin/expr substr "$QPKG_NAME" 1 $max_qpkg_name_len)
 		edit_qpkg_config QPKG_NAME "$QPKG_NAME"
-		
+
 	fi
 }
 
@@ -1233,7 +1236,7 @@ query_qpkg(){
 	local option="$1"
 	local qpkg="$2"
 	[ -f $qpkg ] || err_msg "$qpkg: no such file"
- 	
+
 	local dd_quiet=
 	[ $QDK_VERBOSE -ge $DEBUG ] || dd_quiet="2>/dev/null"
 	local output=
@@ -1256,7 +1259,7 @@ s/^script_len.*/&;/p
 		debug_msg "$dd_command"
 		output="$(eval $dd_command | /bin/sed -n -e '/^QPKG_/p' -e '/^QDK_/p')"
 	fi
- 	
+
 	case $option in
 	dump)
 		echo "$output"
@@ -1734,19 +1737,19 @@ main(){
 		[ -x "$QDK_GPG_APP" ] || err_msg "${QDK_GPG_APP:-gpg2}: command not found"
 	fi
 
-	if [ -n "$qbuild_qpkg_name" ]; then 
+	if [ -n "$qbuild_qpkg_name" ]; then
 		create_env "$qbuild_qpkg_name"
-	elif [ -n "$qbuild_extract_file" ]; then 
+	elif [ -n "$qbuild_extract_file" ]; then
 		extract_qpkg "$qbuild_extract_file" "$qbuild_extract_dir"
-	elif [ -n "$qbuild_verify_file" ]; then 
+	elif [ -n "$qbuild_verify_file" ]; then
 		verify_qpkg "$qbuild_verify_file"
-	elif [ -n "$qbuild_add_sign_file" ]; then 
+	elif [ -n "$qbuild_add_sign_file" ]; then
 		add_sign_qpkg "$qbuild_add_sign_file"
-	elif [ -n "$qbuild_import_key" ]; then 
+	elif [ -n "$qbuild_import_key" ]; then
 		import_key "$qbuild_import_key"
-	elif [ -n "$qbuild_remove_key" ]; then 
+	elif [ -n "$qbuild_remove_key" ]; then
 		remove_key "$qbuild_remove_key"
-	elif [ -n "$qbuild_list_keys" ]; then 
+	elif [ -n "$qbuild_list_keys" ]; then
 		list_keys
 	elif [ -n "$qbuild_query_qpkg" ]; then
 		query_qpkg "$qbuild_query_option" "$qbuild_query_qpkg"
