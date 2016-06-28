@@ -675,7 +675,7 @@ add_qpkg_header(){
             # -------------------------------------------------------
         fi
     }
-    EOF
+	EOF
     if [ -n "$cpu_arch" ]; then
         /bin/cat >>$QDK_QPKG_FILE <<-EOF
         wrong_arch(){
@@ -692,12 +692,12 @@ add_qpkg_header(){
             else return 1
             fi
         }
-        EOF
+		EOF
     fi
     /bin/cat >>$QDK_QPKG_FILE <<-EOF
     /bin/echo "Install QNAP package on TS-NAS..."
     /bin/grep "/mnt/HDA_ROOT" /proc/mounts >/dev/null 2>&1 || exit 1
-    EOF
+	EOF
     if [ -n "$cpu_arch" ]; then
         echo "arch_ok || wrong_arch" >>$QDK_QPKG_FILE
     fi
@@ -714,7 +714,7 @@ add_qpkg_header(){
     offset=\$(/usr/bin/expr \$script_len + $ctrl_len)
     /bin/dd if="\${0}" bs=\$offset skip=1 | /bin/cat | /bin/dd bs=1024 count=$(/usr/bin/expr \( $data_len + 1023 \) / 1024) of=\$_EXTRACT_DIR/$QDK_COMPRESS_FILE || exit 1
     offset=\$(/usr/bin/expr \$offset + $data_len)
-    EOF
+	EOF
 
     # Extract any optional extra data packages.
     if /bin/grep -q '^QDK_EXTRA_FILE\|^QDK_EXTRA_SRC_FILE' $QDK_QPKG_CONFIG; then
@@ -727,7 +727,7 @@ add_qpkg_header(){
     /bin/echo "Remove QPKG extract directory..." \$_EXTRACT_DIR
     /bin/rm -fr \$_EXTRACT_DIR && exit $retval
     exit 1
-    EOF
+	EOF
 
     # Calculate header size (add 1 if number of digits in length will
     # increase the total size).
@@ -1410,144 +1410,174 @@ add_qdk_definitions(){
 }
 
 usage(){
-    /bin/cat <<EOF
-    usage: $(/usr/bin/basename $0) [--extract QPKG [DIR]] [--create-env NAME] [-s|--section SECTION]
+    /bin/cat <<-EOF
+usage: $(/usr/bin/basename $0) [--extract QPKG [DIR]] [--create-env NAME] [-s|--section SECTION]
     [--root ROOT_DIR] [--build-arch ARCH] [--build-version VERSION]
-    [--build-number NUMBER] [--build-model MODEL] [--build-dir BUILD_DIR] [--force-config]
-    [--setup SCRIPT] [--teardown SCRIPT] [--pre-build SCRIPT]
-    [--post-build SCRIPT] [--exclude PATTERN] [--exclude-from FILE]
-    [--gzip|--bzip2|--7zip] [--sign] [--gpg-name ID] [--verify QPKG]
-    [--add-sign QPKG] [--import-key KEY] [--remove-key ID] [--list-keys]
-    [--query OPTION QPKG] [-v|--verbose] [-q|--quiet] [--strict]
+    [--build-number NUMBER] [--build-model MODEL] [--build-dir BUILD_DIR]
+    [--build-branch BRANCH_NAME] [--allow-no-volume]
+    [--force-config] [--setup SCRIPT] [--teardown SCRIPT]
+    [--pre-build SCRIPT] [--post-build SCRIPT] [--exclude PATTERN]
+    [--exclude-from FILE] [--strict] [--gzip|--bzip2|--7zip] [--query OPTION QPKG]
+    [--sign] [--gpg-name ID] [--verify QPKG] [--add-sign QPKG] [--import-key KEY]
+    [--remove-key ID] [--list-keys] [-v|--verbose] [-q|--quiet]
     [-?|-h|--help] [--usage] [-V|--version]
-    EOF
+	EOF
     exit 0
 }
 
 help(){
-    /bin/cat <<EOF
-    usage: $(/usr/bin/basename $0) [--extract QPKG [DIR]] [--create-env NAME] [-s|--section SECTION]
+    /bin/cat <<-EOF
+usage: $(/usr/bin/basename $0) [--extract QPKG [DIR]] [--create-env NAME] [-s|--section SECTION]
     [--root ROOT_DIR] [--build-arch ARCH] [--build-version VERSION]
     [--build-number NUMBER] [--build-model MODEL] [--build-dir BUILD_DIR]
+    [--build-branch BRANCH_NAME] [--allow-no-volume]
     [--force-config] [--setup SCRIPT] [--teardown SCRIPT]
     [--pre-build SCRIPT] [--post-build SCRIPT] [--exclude PATTERN]
-    [--exclude-from FILE] [--gzip|--bzip2|--7zip] [--sign] [--gpg-name ID]
-    [--verify QPKG] [--add-sign QPKG] [--import-key KEY] [--remove-key ID]
-    [--list-keys] [--query OPTION QPKG] [-v|--verbose] [-q|--quiet]
-    [--strict] [-?|-h|--help] [--usage] [-V|--version]
+    [--exclude-from FILE] [--strict] [--gzip|--bzip2|--7zip] [--query OPTION QPKG]
+    [--sign] [--gpg-name ID] [--verify QPKG] [--add-sign QPKG] [--import-key KEY]
+    [--remove-key ID] [--list-keys] [-v|--verbose] [-q|--quiet]
+    [-?|-h|--help] [--usage] [-V|--version]
 
-    -s
-    --section SECTION
-    Add SECTION to the list of searched sections in the configuration file.
-    A section is a named set of definitions. By default, the DEFAULT section
-    will be searched and then any sections specified on the command line.
-    --root ROOT_DIR
-    Use files and meta-data in ROOT_DIR when the QPKG is built (default is
-    the current directory, '.').
-    --build-version VERSION
-    Use given version when QPKG is built (also updates the QPKG_VER
-    definition in qpkg.cfg).
-    --build-number NUMBER
-    Use given build number when QPKG is built.
-    --build-model MODEL
-    Include check for given model in the QPKG package.
-    --build-arch ARCH
-    Build QPKG for specified ARCH (supported values: arm-x09, arm-x19, arm-x31, arm-x41, x86, x86_ce53xx,
-    and x86_64). Only one architecture per option, but you can repeat the
-    option on the command line to add multiple architectures.
-    --build-dir BUILD_DIR
-    Place built QPKG in BUILD_DIR. If a full path is not specified then it
-    is relative to the ROOT_DIR (default is ROOT_DIR/build).
-    --build-branch BRANCH_NAME
-    Attach branch name on the qpkg file name.
-    --allow-no-volume
-    Allow qpkg install without volume. The default path is /mnt/HDA_ROOT/update_pkg when the volume can not be found.
-    --setup SCRIPT
-    Run specified script to setup build environment. Called once before
-    build process is initiated.
-    --teardown SCRIPT
-    Run specified script to cleanup after all builds are finished. Called
-    once after all builds are completed.
-    --pre-build SCRIPT
-    Run specified script before the build process is started. Called before
-    each and every build. First argument contains the architecture (one of
-    arm-x09, arm-x19, arm-x31, arm-x41,x86, x86_ce53xx, and x86_64) and the second argument contains the
-    location of the architecture specific code. For the generic build the
-    arguments are empty.
-    --post-build SCRIPT
-    Run specified script after the build process is finished. Called after
-    each and every build. First argument contains the architecture (one of
-    arm-x09, arm-x19, arm-x31, arm-x41, x86, x86_ce53xx, and x86_64) and the second argument contains the
-    location of the architecture specific code. For the generic build the
-    arguments are empty.
-    --create-env NAME
-    Create a template build environment in the current directory
-    for a QPKG named NAME.
-        --extract QPKG [DIR]
+    --extract QPKG [DIR]
         Extract archive of files and meta-data from QPKG to DIR (default is
         current directory).
-        --exclude PATTERN
+
+    --create-env NAME
+        Create a template build environment in the current directory
+        for a QPKG named NAME.
+
+    -s | --section SECTION
+        Add SECTION to the list of searched sections in the configuration file.
+        A section is a named set of definitions. By default, the DEFAULT section
+        will be searched and then any sections specified on the command line.
+
+    --root ROOT_DIR
+        Use files and meta-data in ROOT_DIR when the QPKG is built (default is
+        the current directory, '.').
+
+    --build-arch ARCH
+        Build QPKG for specified ARCH (supported values: arm-x09, arm-x19, arm-x31, arm-x41, x86, x86_ce53xx,
+        and x86_64). Only one architecture per option, but you can repeat the
+        option on the command line to add multiple architectures.
+
+    --build-version VERSION
+        Use given version when QPKG is built (also updates the QPKG_VER
+        definition in qpkg.cfg).
+
+    --build-number NUMBER
+        Use given build number when QPKG is built.
+
+    --build-model MODEL
+        Include check for given model in the QPKG package.
+
+    --build-dir BUILD_DIR
+        Place built QPKG in BUILD_DIR. If a full path is not specified then it
+        is relative to the ROOT_DIR (default is ROOT_DIR/build).
+
+    --build-branch BRANCH_NAME
+        Attach branch name on the qpkg file name.
+
+    --allow-no-volume
+        Allow qpkg install without volume. The default path is /mnt/HDA_ROOT/update_pkg when the volume can not be found.
+
+    --force-config
+        Ignore missing configuration files specified in QPKG_CONFIG.
+
+    --setup SCRIPT
+        Run specified script to setup build environment. Called once before
+        build process is initiated.
+
+    --teardown SCRIPT
+        Run specified script to cleanup after all builds are finished. Called
+        once after all builds are completed.
+
+    --pre-build SCRIPT
+        Run specified script before the build process is started. Called before
+        each and every build. First argument contains the architecture (one of
+        arm-x09, arm-x19, arm-x31, arm-x41,x86, x86_ce53xx, and x86_64) and the second argument contains the
+        location of the architecture specific code. For the generic build the
+        arguments are empty.
+
+    --post-build SCRIPT
+        Run specified script after the build process is finished. Called after
+        each and every build. First argument contains the architecture (one of
+        arm-x09, arm-x19, arm-x31, arm-x41, x86, x86_ce53xx, and x86_64) and the second argument contains the
+        location of the architecture specific code. For the generic build the
+        arguments are empty.
+
+    --exclude PATTERN
         Do not include files matching PATTERN in data package. This option is
         passed on to rsync and follows the same rules as rsync's --exclude
         option. Only one exclude pattern per option, but you can repeat the
         option on the command line to add multiple patterns.
-        --exclude-from FILE
+
+    --exclude-from FILE
         Related to --exclude, but specifies a FILE that contains exclude
         patterns (one per line). This option is passed on to rsync and follows
         the same rules as rsync's --exclude-from option.
-        --strict
+
+    --strict
         Treat warnings as errors.
-        --force-config
-        Ignore missing configuration files specified in QPKG_CONFIG.
-        --gzip
+
+    --gzip
         Compress QPKG content using gzip (this is the default compression when
         no compression option is specified.)
-        --bzip2
+
+    --bzip2
         Compress QPKG content using bzip2.
-        --7zip
+
+    --7zip
         Compress QPKG content using 7-zip.
-        --query OPTION QPKG
+
+    --query OPTION QPKG
         Retrieve information from QPKG. Available options:
-        dump		dump settings from qpkg.cfg
-        info		summary of settings in qpkg.cfg
-        config	list configuration files
-        require	list required packages
-        conflict	list conflicting packages
-        funcs		output package specific functions
-        --sign
+        dump        dump settings from qpkg.cfg
+        info        summary of settings in qpkg.cfg
+        config      list configuration files
+        require     list required packages
+        conflict    list conflicting packages
+        funcs       output package specific functions
+
+    --sign
         Generate and insert digital signature to QPKG. By default the first key
         in the secret keyring is used.
-        --gpg-name ID
+
+    --gpg-name ID
         Use specified user ID to sign QPKG.
-        --verify QPKG
+
+    --verify QPKG
         Verify digital signature assigned to QPKG.
-        --add-sign QPKG
+
+    --add-sign QPKG
         Generate and insert digital signature to QPKG, replacing any existing
         signature.
-        --import-key KEY
+
+    --import-key KEY
         Import ASCII armored key to public keyring.
-        --list-keys
-        Show keys in public keyring.
-        --remove-key ID
+
+    --remove-key ID
         Remove key with specified ID from public keyring.
-        -?
-        -h
-        --help
-        Show this help message.
-        --usage
-        Display brief usage information.
-        -q
-        --quiet
+
+    --list-keys
+        Show keys in public keyring.
+
+    -v | --verbose
+        Verbose mode. Multiple options increase the verbosity. The maximum is 3.
+
+    -q | --quiet
         Silent mode. Do not write anything to standard output. Normally only
         error messages will be displayed.
-        -v
-        --verbose
-        Verbose mode. Multiple options increase the verbosity. The maximum is 3.
-        -V
-        --version
+
+    -? | -h | --help
+        Show this help message.
+
+    --usage
+        Display brief usage information.
+
+    -V | --version
         Print a single line containing the version number of QDK.
-        EOF
-        exit 0
+	EOF
+    exit 0
     }
 
     version(){
@@ -1588,40 +1618,40 @@ help(){
         while  [ $# -gt 0 ]
         do
             case "$1" in
-                --usage)	qbuild_usage=TRUE ;;
-                --help|-h|-\?)	qbuild_help=TRUE ;;
-                --version|-V)	qbuild_version=TRUE ;;
-                --quiet|-q)	qbuild_quiet=TRUE ;;
-                --verbose|-v)	QDK_VERBOSE=$(/usr/bin/expr $QDK_VERBOSE + 1);;
-                --strict)	QDK_STRICT=TRUE ;;
-                --force-config)	QDK_FORCE_CONFIG=TRUE ;;
-                --7zip)		QDK_COMPRESS_METHOD="7zip"
+                --usage)    qbuild_usage=TRUE ;;
+                --help|-h|-\?)  qbuild_help=TRUE ;;
+                --version|-V)   qbuild_version=TRUE ;;
+                --quiet|-q) qbuild_quiet=TRUE ;;
+                --verbose|-v)   QDK_VERBOSE=$(/usr/bin/expr $QDK_VERBOSE + 1);;
+                --strict)   QDK_STRICT=TRUE ;;
+                --force-config) QDK_FORCE_CONFIG=TRUE ;;
+                --7zip)     QDK_COMPRESS_METHOD="7zip"
                     ;;
-                --gzip)		QDK_COMPRESS_METHOD="gzip"
+                --gzip)     QDK_COMPRESS_METHOD="gzip"
                     ;;
-                --bzip2)	QDK_COMPRESS_METHOD="bzip2"
+                --bzip2)    QDK_COMPRESS_METHOD="bzip2"
                     ;;
-                --create-env)	qbuild_qpkg_name="$2"
+                --create-env)   qbuild_qpkg_name="$2"
                     [ -n "$qbuild_qpkg_name" ] || err_msg "--create-env: no name"
                     shift
                     ;;
-                --setup)	QDK_SETUP="$2"
+                --setup)    QDK_SETUP="$2"
                     [ -n "$QDK_SETUP" ] || err_msg "--setup: no script"
                     shift
                     ;;
-                --teardown)	QDK_TEARDOWN="$2"
+                --teardown) QDK_TEARDOWN="$2"
                     [ -n "$QDK_TEARDOWN" ] || err_msg "--teardown: no script"
                     shift
                     ;;
-                --pre-build)	QDK_PRE_BUILD="$2"
+                --pre-build)    QDK_PRE_BUILD="$2"
                     [ -n "$QDK_PRE_BUILD" ] || err_msg "--pre-build: no script"
                     shift
                     ;;
-                --post-build)	QDK_POST_BUILD="$2"
+                --post-build)   QDK_POST_BUILD="$2"
                     [ -n "$QDK_POST_BUILD" ] || err_msg "--post-build: no script"
                     shift
                     ;;
-                --build-dir) 	QDK_BUILD_DIR="$2"
+                --build-dir)    QDK_BUILD_DIR="$2"
                     [ -n "$QDK_BUILD_DIR" ] || err_msg "--build-dir: no directory"
                     shift
                     ;;
@@ -1633,13 +1663,13 @@ help(){
                     [ -n "$QDK_BUILD_RELEASE" ] || err_msg "--build-number: no number"
                     shift
                     ;;
-                --build-branch)	QDK_BUILD_BRANCH="$2"
+                --build-branch) QDK_BUILD_BRANCH="$2"
                     [ -n "$QDK_BUILD_BRANCH" ] || err_msg "--build-branch: no branch name"
                     shift
                     ;;
                 --allow-no-volume) QDK_ALLOW_NO_VOLUME=1
                     ;;
-                --build-arch)	local arch="$2"
+                --build-arch)   local arch="$2"
                     [ -n "$arch" ] || err_msg "--build-arch: no architecture"
                     add_arch "$arch"
                     shift
@@ -1647,64 +1677,64 @@ help(){
                         cp -af qinstall-$arch.sh qinstall.sh
                     fi
                     ;;
-                --build-model)	QDK_BUILD_MODEL="$2"
+                --build-model)  QDK_BUILD_MODEL="$2"
                     [ -n "$QDK_BUILD_MODEL" ] || err_msg "--build-model: no model"
                     shift
                     ;;
-                --root)		QDK_ROOT_DIR="$2"
+                --root)     QDK_ROOT_DIR="$2"
                     [ -n "$QDK_ROOT_DIR" ] || err_msg "--root: no directory"
                     shift
                     ;;
-                --extract)	qbuild_extract_file="$2"
+                --extract)  qbuild_extract_file="$2"
                     qbuild_extract_dir="$3"
                     [ -n "$qbuild_extract_file" ] || err_msg "--extract: no file"
                     shift
                     ;;
-                --exclude)	local rsync_pattern="$2"
+                --exclude)  local rsync_pattern="$2"
                     [ -n "$rsync_pattern" ] || err_msg "--exclude: no pattern"
                     QDK_RSYNC_EXCLUDE="$QDK_RSYNC_EXCLUDE --exclude=$rsync_pattern"
                     shift
                     ;;
-                --exclude-from)	local rsync_file="$2"
+                --exclude-from) local rsync_file="$2"
                     [ -n "$rsync_file" ] || err_msg "--exclude-from: no file"
                     QDK_RSYNC_EXCLUDE_FROM="--exclude-from=$rsync_file"
                     shift
                     ;;
-                --section|-s)	local section="$2"
+                --section|-s)   local section="$2"
                     [ -n "$section" ] || err_msg "--section: no section"
                     add_qdk_definitions "$section"
                     shift
                     ;;
-                --sign)		qbuild_sign=TRUE ;;
-                --gpg-name)	QDK_GPG_NAME="$2"
+                --sign)     qbuild_sign=TRUE ;;
+                --gpg-name) QDK_GPG_NAME="$2"
                     [ -n "$QDK_GPG_NAME" ] || err_msg "--gpg-name: no name"
                     QDK_SIGNATURE="gpg"
                     QDK_SIGN="TRUE"
                     shift
                     ;;
-                --verify)	qbuild_verify_file="$2"
+                --verify)   qbuild_verify_file="$2"
                     [ -n "$qbuild_verify_file" ] || err_msg "--verify: no file"
                     shift
                     ;;
-                --add-sign)	qbuild_add_sign_file="$2"
+                --add-sign) qbuild_add_sign_file="$2"
                     [ -n "$qbuild_add_sign_file" ] || err_msg "$1: no file"
                     shift
                     ;;
-                --import-key)	qbuild_import_key="$2"
+                --import-key)   qbuild_import_key="$2"
                     [ -n "$qbuild_import_key" ] || err_msg "--import-key: no file"
                     shift
                     ;;
-                --remove-key)	qbuild_remove_key="$2"
+                --remove-key)   qbuild_remove_key="$2"
                     [ -n "$qbuild_remove_key" ] || err_msg "--remove-key: no name"
                     shift
                     ;;
-                --list-keys)	qbuild_list_keys=TRUE ;;
-                --query)	qbuild_query_option="$2"
+                --list-keys)    qbuild_list_keys=TRUE ;;
+                --query)    qbuild_query_option="$2"
                     qbuild_query_qpkg="$3"
                     [ -n "$qbuild_query_qpkg" ] || err_msg "--query: missing argument"
                     shift
                     ;;
-                -*)		qbuild_usage=TRUE ;;
+                -*)     qbuild_usage=TRUE ;;
             esac
             shift
         done
