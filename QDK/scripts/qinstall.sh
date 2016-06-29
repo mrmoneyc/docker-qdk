@@ -207,8 +207,14 @@ err_log(){
 
 err_log_to_file(){
     echo "[$QPKG_NAME][$(date)] $1." >> $LOG_INSTALL_DEBUG
+    echo "===" >> $LOG_INSTALL_DEBUG
     ps aux >> $LOG_INSTALL_DEBUG
+    echo "===" >> $LOG_INSTALL_DEBUG
     df -h >> $LOG_INSTALL_DEBUG
+    echo "===" >> $LOG_INSTALL_DEBUG
+    echo "Current Directory:" $(pwd) >> $LOG_INSTALL_DEBUG
+    echo "===" >> $LOG_INSTALL_DEBUG
+    ls -al $(pwd) >> $LOG_INSTALL_DEBUG
     echo -e "\n" >> $LOG_INSTALL_DEBUG
     err_log "$SYS_MSG_FILE_ERROR"
 }
