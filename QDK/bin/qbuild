@@ -29,6 +29,11 @@
 # Cleanup any temporary directories and files at termination.
 trap 'cleanup_all' INT TERM
 QDK_PATH=/QDK
+
+# Install debug log
+LOG_INSTALL_DEBUG="/mnt/HDA_ROOT/update_pkg/qpkg_install_debug.log"
+
+
 # Check for deprecated definitions and replace them with new
 # definitions (when applicable).
 check_deprecated_definitions(){
@@ -614,6 +619,14 @@ add_qpkg_header(){
 
     echo "#!/bin/sh" > $QDK_QPKG_FILE
     /bin/cat >>$QDK_QPKG_FILE <<-EOF
+    err_log_to_file(){
+        echo "[$QPKG_NAME][$(date)] QPKG Extract Failed." >> $LOG_INSTALL_DEBUG
+        ps aux >> $LOG_INSTALL_DEBUG
+        df -h >> $LOG_INSTALL_DEBUG
+        exit 1
+    }
+	EOF
+    /bin/cat >>$QDK_QPKG_FILE <<-EOF
     find_base(){
         HDD_MOUNT=\`/sbin/getcfg Public path -f /etc/config/smb.conf\`
         local log_tool="/sbin/log_tool -t2 -uSystem -p127.0.0.1 -mlocalhost -a"
@@ -642,13 +655,13 @@ add_qpkg_header(){
                     return 1
                 fi
                 QPKG_INSTALL_PATH="\${QPKG_BASE}/.qpkg"
-                QPKG_DIR="\${QPKG_INSTALL_PATH}/\${QPKG_NAME}"
-                _EXTRACT_DIR="\$QPKG_INSTALL_PATH/.tmp"
+                QPKG_DIR="\${QPKG_INSTALL_PATH}/${QPKG_NAME}"
+                _EXTRACT_DIR="\${QPKG_DIR}/.tmp"
             else
                 if [ -e "\$QINSTALL_PATH" ]; then
                     QPKG_INSTALL_PATH="\${QINSTALL_PATH}"
-                    QPKG_DIR="\${QINSTALL_PATH}/\${QPKG_NAME}"
-                    _EXTRACT_DIR="\$QPKG_INSTALL_PATH/.tmp"
+                    QPKG_DIR="\${QPKG_INSTALL_PATH}/${QPKG_NAME}"
+                    _EXTRACT_DIR="\${QPKG_DIR}/.tmp"
                 else
                     $log_tool "QTS application install volume not found."
                     exit
@@ -662,7 +675,7 @@ add_qpkg_header(){
             if [ ${QDK_ALLOW_NO_VOLUME} = 1 ]; then
                 if [ -d "/mnt/HDA_ROOT/update_pkg" ]; then
                     QPKG_INSTALL_PATH="/mnt/HDA_ROOT/update_pkg"
-                    QPKG_DIR="\${QINSTALL_PATH}/\${QPKG_NAME}"
+                    QPKG_DIR="\${QPKG_INSTALL_PATH}/${QPKG_NAME}"
                     _EXTRACT_DIR="/tmp/$QPKG_NAME"
                 else
                     $log_tool "QTS system volume not found."
@@ -708,11 +721,12 @@ add_qpkg_header(){
 
     /bin/cat >>$QDK_QPKG_FILE <<-EOF
     find_base
+    /bin/echo "QPKG Extract Destination: \$_EXTRACT_DIR"
     /bin/mkdir -p \$_EXTRACT_DIR || exit 1
     script_len=SCRIPT_LEN
-    /bin/dd if="\${0}" bs=\$script_len skip=1 | /bin/tar -xO | /bin/tar -xzv -C \$_EXTRACT_DIR || exit 1
+    /bin/dd if="\${0}" bs=\$script_len skip=1 | /bin/tar -xO | /bin/tar -xzv -C \$_EXTRACT_DIR || err_log_to_file
     offset=\$(/usr/bin/expr \$script_len + $ctrl_len)
-    /bin/dd if="\${0}" bs=\$offset skip=1 | /bin/cat | /bin/dd bs=1024 count=$(/usr/bin/expr \( $data_len + 1023 \) / 1024) of=\$_EXTRACT_DIR/$QDK_COMPRESS_FILE || exit 1
+    /bin/dd if="\${0}" bs=\$offset skip=1 | /bin/cat | /bin/dd bs=1024 count=$(/usr/bin/expr \( $data_len + 1023 \) / 1024) of=\$_EXTRACT_DIR/$QDK_COMPRESS_FILE || err_log_to_file
     offset=\$(/usr/bin/expr \$offset + $data_len)
 	EOF
 
@@ -724,7 +738,6 @@ add_qpkg_header(){
 
     /bin/cat >>$QDK_QPKG_FILE <<-EOF
     ( cd \$_EXTRACT_DIR && /bin/sh ${QDK_INSTALL_SCRIPT##*/} || echo "Installation Abort." )
-    /bin/echo "Remove QPKG extract directory..." \$_EXTRACT_DIR
     /bin/rm -fr \$_EXTRACT_DIR && exit $retval
     exit 1
 	EOF
@@ -1580,191 +1593,191 @@ usage: $(/usr/bin/basename $0) [--extract QPKG [DIR]] [--create-env NAME] [-s|--
     exit 0
     }
 
-    version(){
-        echo "$(/usr/bin/basename $0) $QDK_VERSION"
-        exit 0
-    }
+version(){
+    echo "$(/usr/bin/basename $0) $QDK_VERSION"
+    exit 0
+}
 
-    main(){
-        QDK_QPKG_CONFIG="${QDK_QPKG_CONFIG:-qpkg.cfg}"
-        QDK_PACKAGE_ROUTINES="${QDK_PACKAGE_ROUTINES:-package_routines}"
+main(){
+    QDK_QPKG_CONFIG="${QDK_QPKG_CONFIG:-qpkg.cfg}"
+    QDK_PACKAGE_ROUTINES="${QDK_PACKAGE_ROUTINES:-package_routines}"
 
-        QDK_COMPRESS_METHOD="${QDK_COMPRESS_METHOD:-gzip}"
-        QDK_CONTROL_FILE="${QDK_CONTROL_FILE:-control.tar}"
-        QDK_COMPRESS_FILE="${QDK_COMPRESS_FILE:-data.tar.gz}"
-        QDK_GPG_PUBKEYRING="${QDK_GPG_PUBKEYRING:-/etc/config/qpkg.gpg}"
-        QDK_ALLOW_NO_VOLUME=0
+    QDK_COMPRESS_METHOD="${QDK_COMPRESS_METHOD:-gzip}"
+    QDK_CONTROL_FILE="${QDK_CONTROL_FILE:-control.tar}"
+    QDK_COMPRESS_FILE="${QDK_COMPRESS_FILE:-data.tar.gz}"
+    QDK_GPG_PUBKEYRING="${QDK_GPG_PUBKEYRING:-/etc/config/qpkg.gpg}"
+    QDK_ALLOW_NO_VOLUME=0
 
-        [ -n "$QDK_GPG_KEYPATH" ] && export GNUPGHOME="$QDK_GPG_KEYPATH"
+    [ -n "$QDK_GPG_KEYPATH" ] && export GNUPGHOME="$QDK_GPG_KEYPATH"
 
-        QDK_VERBOSE=${QDK_VERBOSE:-$NORMAL}
+    QDK_VERBOSE=${QDK_VERBOSE:-$NORMAL}
 
-        sanity_check_qdk_environment
+    sanity_check_qdk_environment
 
-        check_deprecated_definitions
+    check_deprecated_definitions
 
-        local qbuild_usage=
-        local qbuild_help=
-        local qbuild_quiet=
-        local qbuild_version=
-        local qbuild_qpkg_name=
-        local qbuild_extract_file=
-        local qbuild_import_key=
-        local qbuild_remove_key=
-        local qbuild_verify_file=
-        local qbuild_add_sign_file=
-        local qbuild_sign=
-        local qbuild_list_keys=
-        while  [ $# -gt 0 ]
-        do
-            case "$1" in
-                --usage)    qbuild_usage=TRUE ;;
-                --help|-h|-\?)  qbuild_help=TRUE ;;
-                --version|-V)   qbuild_version=TRUE ;;
-                --quiet|-q) qbuild_quiet=TRUE ;;
-                --verbose|-v)   QDK_VERBOSE=$(/usr/bin/expr $QDK_VERBOSE + 1);;
-                --strict)   QDK_STRICT=TRUE ;;
-                --force-config) QDK_FORCE_CONFIG=TRUE ;;
-                --7zip)     QDK_COMPRESS_METHOD="7zip"
-                    ;;
-                --gzip)     QDK_COMPRESS_METHOD="gzip"
-                    ;;
-                --bzip2)    QDK_COMPRESS_METHOD="bzip2"
-                    ;;
-                --create-env)   qbuild_qpkg_name="$2"
-                    [ -n "$qbuild_qpkg_name" ] || err_msg "--create-env: no name"
-                    shift
-                    ;;
-                --setup)    QDK_SETUP="$2"
-                    [ -n "$QDK_SETUP" ] || err_msg "--setup: no script"
-                    shift
-                    ;;
-                --teardown) QDK_TEARDOWN="$2"
-                    [ -n "$QDK_TEARDOWN" ] || err_msg "--teardown: no script"
-                    shift
-                    ;;
-                --pre-build)    QDK_PRE_BUILD="$2"
-                    [ -n "$QDK_PRE_BUILD" ] || err_msg "--pre-build: no script"
-                    shift
-                    ;;
-                --post-build)   QDK_POST_BUILD="$2"
-                    [ -n "$QDK_POST_BUILD" ] || err_msg "--post-build: no script"
-                    shift
-                    ;;
-                --build-dir)    QDK_BUILD_DIR="$2"
-                    [ -n "$QDK_BUILD_DIR" ] || err_msg "--build-dir: no directory"
-                    shift
-                    ;;
-                --build-version) QDK_BUILD_VERSION="$2"
-                    [ -n "$QDK_BUILD_VERSION" ] || err_msg "--build-version: no version"
-                    shift
-                    ;;
-                --build-number) QDK_BUILD_RELEASE="$2"
-                    [ -n "$QDK_BUILD_RELEASE" ] || err_msg "--build-number: no number"
-                    shift
-                    ;;
-                --build-branch) QDK_BUILD_BRANCH="$2"
-                    [ -n "$QDK_BUILD_BRANCH" ] || err_msg "--build-branch: no branch name"
-                    shift
-                    ;;
-                --allow-no-volume) QDK_ALLOW_NO_VOLUME=1
-                    ;;
-                --build-arch)   local arch="$2"
-                    [ -n "$arch" ] || err_msg "--build-arch: no architecture"
-                    add_arch "$arch"
-                    shift
-                    if [ -f qinstall-$arch.sh ]; then
-                        cp -af qinstall-$arch.sh qinstall.sh
-                    fi
-                    ;;
-                --build-model)  QDK_BUILD_MODEL="$2"
-                    [ -n "$QDK_BUILD_MODEL" ] || err_msg "--build-model: no model"
-                    shift
-                    ;;
-                --root)     QDK_ROOT_DIR="$2"
-                    [ -n "$QDK_ROOT_DIR" ] || err_msg "--root: no directory"
-                    shift
-                    ;;
-                --extract)  qbuild_extract_file="$2"
-                    qbuild_extract_dir="$3"
-                    [ -n "$qbuild_extract_file" ] || err_msg "--extract: no file"
-                    shift
-                    ;;
-                --exclude)  local rsync_pattern="$2"
-                    [ -n "$rsync_pattern" ] || err_msg "--exclude: no pattern"
-                    QDK_RSYNC_EXCLUDE="$QDK_RSYNC_EXCLUDE --exclude=$rsync_pattern"
-                    shift
-                    ;;
-                --exclude-from) local rsync_file="$2"
-                    [ -n "$rsync_file" ] || err_msg "--exclude-from: no file"
-                    QDK_RSYNC_EXCLUDE_FROM="--exclude-from=$rsync_file"
-                    shift
-                    ;;
-                --section|-s)   local section="$2"
-                    [ -n "$section" ] || err_msg "--section: no section"
-                    add_qdk_definitions "$section"
-                    shift
-                    ;;
-                --sign)     qbuild_sign=TRUE ;;
-                --gpg-name) QDK_GPG_NAME="$2"
-                    [ -n "$QDK_GPG_NAME" ] || err_msg "--gpg-name: no name"
-                    QDK_SIGNATURE="gpg"
-                    QDK_SIGN="TRUE"
-                    shift
-                    ;;
-                --verify)   qbuild_verify_file="$2"
-                    [ -n "$qbuild_verify_file" ] || err_msg "--verify: no file"
-                    shift
-                    ;;
-                --add-sign) qbuild_add_sign_file="$2"
-                    [ -n "$qbuild_add_sign_file" ] || err_msg "$1: no file"
-                    shift
-                    ;;
-                --import-key)   qbuild_import_key="$2"
-                    [ -n "$qbuild_import_key" ] || err_msg "--import-key: no file"
-                    shift
-                    ;;
-                --remove-key)   qbuild_remove_key="$2"
-                    [ -n "$qbuild_remove_key" ] || err_msg "--remove-key: no name"
-                    shift
-                    ;;
-                --list-keys)    qbuild_list_keys=TRUE ;;
-                --query)    qbuild_query_option="$2"
-                    qbuild_query_qpkg="$3"
-                    [ -n "$qbuild_query_qpkg" ] || err_msg "--query: missing argument"
-                    shift
-                    ;;
-                -*)     qbuild_usage=TRUE ;;
-            esac
-            shift
-        done
+    local qbuild_usage=
+    local qbuild_help=
+    local qbuild_quiet=
+    local qbuild_version=
+    local qbuild_qpkg_name=
+    local qbuild_extract_file=
+    local qbuild_import_key=
+    local qbuild_remove_key=
+    local qbuild_verify_file=
+    local qbuild_add_sign_file=
+    local qbuild_sign=
+    local qbuild_list_keys=
+    while  [ $# -gt 0 ]
+    do
+        case "$1" in
+            --usage)    qbuild_usage=TRUE ;;
+            --help|-h|-\?)  qbuild_help=TRUE ;;
+            --version|-V)   qbuild_version=TRUE ;;
+            --quiet|-q) qbuild_quiet=TRUE ;;
+            --verbose|-v)   QDK_VERBOSE=$(/usr/bin/expr $QDK_VERBOSE + 1);;
+            --strict)   QDK_STRICT=TRUE ;;
+            --force-config) QDK_FORCE_CONFIG=TRUE ;;
+            --7zip)     QDK_COMPRESS_METHOD="7zip"
+                ;;
+            --gzip)     QDK_COMPRESS_METHOD="gzip"
+                ;;
+            --bzip2)    QDK_COMPRESS_METHOD="bzip2"
+                ;;
+            --create-env)   qbuild_qpkg_name="$2"
+                [ -n "$qbuild_qpkg_name" ] || err_msg "--create-env: no name"
+                shift
+                ;;
+            --setup)    QDK_SETUP="$2"
+                [ -n "$QDK_SETUP" ] || err_msg "--setup: no script"
+                shift
+                ;;
+            --teardown) QDK_TEARDOWN="$2"
+                [ -n "$QDK_TEARDOWN" ] || err_msg "--teardown: no script"
+                shift
+                ;;
+            --pre-build)    QDK_PRE_BUILD="$2"
+                [ -n "$QDK_PRE_BUILD" ] || err_msg "--pre-build: no script"
+                shift
+                ;;
+            --post-build)   QDK_POST_BUILD="$2"
+                [ -n "$QDK_POST_BUILD" ] || err_msg "--post-build: no script"
+                shift
+                ;;
+            --build-dir)    QDK_BUILD_DIR="$2"
+                [ -n "$QDK_BUILD_DIR" ] || err_msg "--build-dir: no directory"
+                shift
+                ;;
+            --build-version) QDK_BUILD_VERSION="$2"
+                [ -n "$QDK_BUILD_VERSION" ] || err_msg "--build-version: no version"
+                shift
+                ;;
+            --build-number) QDK_BUILD_RELEASE="$2"
+                [ -n "$QDK_BUILD_RELEASE" ] || err_msg "--build-number: no number"
+                shift
+                ;;
+            --build-branch) QDK_BUILD_BRANCH="$2"
+                [ -n "$QDK_BUILD_BRANCH" ] || err_msg "--build-branch: no branch name"
+                shift
+                ;;
+            --allow-no-volume) QDK_ALLOW_NO_VOLUME=1
+                ;;
+            --build-arch)   local arch="$2"
+                [ -n "$arch" ] || err_msg "--build-arch: no architecture"
+                add_arch "$arch"
+                shift
+                if [ -f qinstall-$arch.sh ]; then
+                    cp -af qinstall-$arch.sh qinstall.sh
+                fi
+                ;;
+            --build-model)  QDK_BUILD_MODEL="$2"
+                [ -n "$QDK_BUILD_MODEL" ] || err_msg "--build-model: no model"
+                shift
+                ;;
+            --root)     QDK_ROOT_DIR="$2"
+                [ -n "$QDK_ROOT_DIR" ] || err_msg "--root: no directory"
+                shift
+                ;;
+            --extract)  qbuild_extract_file="$2"
+                qbuild_extract_dir="$3"
+                [ -n "$qbuild_extract_file" ] || err_msg "--extract: no file"
+                shift
+                ;;
+            --exclude)  local rsync_pattern="$2"
+                [ -n "$rsync_pattern" ] || err_msg "--exclude: no pattern"
+                QDK_RSYNC_EXCLUDE="$QDK_RSYNC_EXCLUDE --exclude=$rsync_pattern"
+                shift
+                ;;
+            --exclude-from) local rsync_file="$2"
+                [ -n "$rsync_file" ] || err_msg "--exclude-from: no file"
+                QDK_RSYNC_EXCLUDE_FROM="--exclude-from=$rsync_file"
+                shift
+                ;;
+            --section|-s)   local section="$2"
+                [ -n "$section" ] || err_msg "--section: no section"
+                add_qdk_definitions "$section"
+                shift
+                ;;
+            --sign)     qbuild_sign=TRUE ;;
+            --gpg-name) QDK_GPG_NAME="$2"
+                [ -n "$QDK_GPG_NAME" ] || err_msg "--gpg-name: no name"
+                QDK_SIGNATURE="gpg"
+                QDK_SIGN="TRUE"
+                shift
+                ;;
+            --verify)   qbuild_verify_file="$2"
+                [ -n "$qbuild_verify_file" ] || err_msg "--verify: no file"
+                shift
+                ;;
+            --add-sign) qbuild_add_sign_file="$2"
+                [ -n "$qbuild_add_sign_file" ] || err_msg "$1: no file"
+                shift
+                ;;
+            --import-key)   qbuild_import_key="$2"
+                [ -n "$qbuild_import_key" ] || err_msg "--import-key: no file"
+                shift
+                ;;
+            --remove-key)   qbuild_remove_key="$2"
+                [ -n "$qbuild_remove_key" ] || err_msg "--remove-key: no name"
+                shift
+                ;;
+            --list-keys)    qbuild_list_keys=TRUE ;;
+            --query)    qbuild_query_option="$2"
+                qbuild_query_qpkg="$3"
+                [ -n "$qbuild_query_qpkg" ] || err_msg "--query: missing argument"
+                shift
+                ;;
+            -*)     qbuild_usage=TRUE ;;
+        esac
+        shift
+    done
 
-        [ -z "$qbuild_quiet" ] || QDK_VERBOSE=$QUIET
-        [ $QDK_VERBOSE -le $DEBUG ] || set -x
+    [ -z "$qbuild_quiet" ] || QDK_VERBOSE=$QUIET
+    [ $QDK_VERBOSE -le $DEBUG ] || set -x
 
-        [ -n "$qbuild_version" ] && version
-        [ -n "$qbuild_usage" ] && usage
-        [ -n "$qbuild_help" ] && help
+    [ -n "$qbuild_version" ] && version
+    [ -n "$qbuild_usage" ] && usage
+    [ -n "$qbuild_help" ] && help
 
-        QDK_STRICT=${QDK_STRICT:-FALSE}
-        QDK_FORCE_CONFIG=${QDK_FORCE_CONFIG:-FALSE}
+    QDK_STRICT=${QDK_STRICT:-FALSE}
+    QDK_FORCE_CONFIG=${QDK_FORCE_CONFIG:-FALSE}
 
-        if [ -n "$qbuild_sign" ]; then
-            [ -n "$QDK_SIGNATURE" ] || err_msg "--sign: QDK_SIGNATURE must be defined"
-            case "$QDK_SIGNATURE" in
-                gpg)
-                    QDK_SIGN="TRUE"
-                    ;;
-                *)
-                    err_msg "$QDK_SIGNATURE: not supported signature type"
-                    ;;
-            esac
-        fi
-        if [ "$QDK_SIGN" = "TRUE" ] || [ -n "$qbuild_verify_file" ] ||
-            [ -n "$qbuild_add_sign_file" ] || [ -n "$qbuild_import_key" ] ||
-            [ -n "$qbuild_remove_key" ] || [ -n "$qbuild_list_keys" ]; then
-        QDK_GPG_APP="${QDK_GPG_APP:-$(command -v gpg2)}"
-        [ -x "$QDK_GPG_APP" ] || err_msg "${QDK_GPG_APP:-gpg2}: command not found"
+    if [ -n "$qbuild_sign" ]; then
+        [ -n "$QDK_SIGNATURE" ] || err_msg "--sign: QDK_SIGNATURE must be defined"
+        case "$QDK_SIGNATURE" in
+            gpg)
+                QDK_SIGN="TRUE"
+                ;;
+            *)
+                err_msg "$QDK_SIGNATURE: not supported signature type"
+                ;;
+        esac
+    fi
+    if [ "$QDK_SIGN" = "TRUE" ] || [ -n "$qbuild_verify_file" ] ||
+        [ -n "$qbuild_add_sign_file" ] || [ -n "$qbuild_import_key" ] ||
+        [ -n "$qbuild_remove_key" ] || [ -n "$qbuild_list_keys" ]; then
+    QDK_GPG_APP="${QDK_GPG_APP:-$(command -v gpg2)}"
+    [ -x "$QDK_GPG_APP" ] || err_msg "${QDK_GPG_APP:-gpg2}: command not found"
     fi
 
     if [ -n "$qbuild_qpkg_name" ]; then

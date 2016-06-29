@@ -144,6 +144,11 @@ SYS_MSG_FILE_ERROR="Data file error."
 SYS_MSG_PUBLIC_NOT_FOUND="Public share not found."
 SYS_MSG_FAILED_CONFIG_RESTORE="Failed to restore saved configuration data."
 
+###########################################
+# Install debug log
+###########################################
+LOG_INSTALL_DEBUG="/mnt/HDA_ROOT/update_pkg/qpkg_install_debug.log"
+
 ######################################
 # Inform web interface about progress
 ######################################
@@ -200,6 +205,15 @@ err_log(){
     exit 1
 }
 
+err_log_to_file(){
+    echo "[$QPKG_NAME][$(date)] $1." >> $LOG_INSTALL_DEBUG
+    ps aux >> $LOG_INSTALL_DEBUG
+    df -h >> $LOG_INSTALL_DEBUG
+    echo -e "\n" >> $LOG_INSTALL_DEBUG
+    err_log "$SYS_MSG_FILE_ERROR"
+}
+
+
 ####################
 # Extract data file
 ####################
@@ -207,15 +221,18 @@ extract_data(){
     [ -n "$1" ] || return 1
     local archive="$1"
     local root_dir="${2:-$SYS_QPKG_DIR}"
+    echo "[$QPKG_NAME][$(date)] Extract $(pwd)/$archive to $root_dir... " >> $LOG_INSTALL_DEBUG
     case "$archive" in
         *.gz|*.bz2)
-            $CMD_TAR xvf "$archive" -C "$root_dir" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
+            echo "*.gz, *.bz2" >> $LOG_INSTALL_DEBUG
+            $CMD_TAR xvf "$archive" -C "$root_dir" 2>>$LOG_INSTALL_DEBUG >>$SYS_QPKG_DIR/.list || err_log_to_file "Data Extract Failed"
             ;;
         *.7z)
-            $CMD_7Z x -so "$archive" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log | $CMD_TAR xv -C "$root_dir" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
+            echo "*.7z" >> $LOG_INSTALL_DEBUG
+            $CMD_7Z x -so "$archive" 2>>$LOG_INSTALL_DEBUG | $CMD_TAR xv -C "$root_dir" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log_to_file "Data Extract Failed"
             ;;
         *)
-            err_log "$SYS_MSG_FILE_ERROR"
+            err_log_to_file "Unsupport archive type"
     esac
 }
 
@@ -224,8 +241,8 @@ extract_data(){
 #############################
 extract_config(){
     if [ -f $SYS_QPKG_DATA_CONFIG_FILE ]; then
-        # $CMD_TAR xvf $SYS_QPKG_DATA_CONFIG_FILE -C / 2>/dev/null | $CMD_SED 's/\.//' 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
-        $CMD_TAR xvf $SYS_QPKG_DATA_CONFIG_FILE -C / 2>/dev/null | $CMD_SED 's/\.//' 2>/dev/null >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"; echo "qinstall.sh Line#230" >> /mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log
+        echo "[$QPKG_NAME][$(date)] Extract config $SYS_QPKG_DATA_CONFIG_FILE..." >> $LOG_INSTALL_DEBUG
+        $CMD_TAR xvf $SYS_QPKG_DATA_CONFIG_FILE -C / 2>>$LOG_INSTALL_DEBUG | $CMD_SED 's/\.//' 2>$LOG_INSTALL_DEBUG >>$SYS_QPKG_DIR/.list || err_log_to_file "Config Extract Failed"
     fi
 }
 
