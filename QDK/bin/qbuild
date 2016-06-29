@@ -724,9 +724,9 @@ add_qpkg_header(){
     /bin/echo "QPKG Extract Destination: \$_EXTRACT_DIR"
     /bin/mkdir -p \$_EXTRACT_DIR || exit 1
     script_len=SCRIPT_LEN
-    /bin/dd if="\${0}" bs=\$script_len skip=1 | /bin/tar -xO | /bin/tar -xzv -C \$_EXTRACT_DIR || err_log_to_file
+    /bin/dd if="\${0}" bs=\$script_len skip=1 | /bin/tar -xO | /bin/tar -xzv -C \$_EXTRACT_DIR || exit 1
     offset=\$(/usr/bin/expr \$script_len + $ctrl_len)
-    /bin/dd if="\${0}" bs=\$offset skip=1 | /bin/cat | /bin/dd bs=1024 count=$(/usr/bin/expr \( $data_len + 1023 \) / 1024) of=\$_EXTRACT_DIR/$QDK_COMPRESS_FILE || err_log_to_file
+    /bin/dd if="\${0}" bs=\$offset skip=1 | /bin/cat | /bin/dd bs=1024 count=$(/usr/bin/expr \( $data_len + 1023 \) / 1024) of=\$_EXTRACT_DIR/$QDK_COMPRESS_FILE || exit 1
     offset=\$(/usr/bin/expr \$offset + $data_len)
 	EOF
 

@@ -231,14 +231,14 @@ extract_data(){
     case "$archive" in
         *.gz|*.bz2)
             echo "*.gz, *.bz2" >> $LOG_INSTALL_DEBUG
-            $CMD_TAR xvf "$archive" -C "$root_dir" 2>>$LOG_INSTALL_DEBUG >>$SYS_QPKG_DIR/.list || err_log_to_file "Data Extract Failed"
+            $CMD_TAR xvf "$archive" -C "$root_dir" 2>>$LOG_INSTALL_DEBUG >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
             ;;
         *.7z)
             echo "*.7z" >> $LOG_INSTALL_DEBUG
-            $CMD_7Z x -so "$archive" 2>>$LOG_INSTALL_DEBUG | $CMD_TAR xv -C "$root_dir" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log_to_file "Data Extract Failed"
+            $CMD_7Z x -so "$archive" 2>>$LOG_INSTALL_DEBUG | $CMD_TAR xv -C "$root_dir" 2>>/mnt/HDA_ROOT/update_pkg/qpkg_install_fail.log >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
             ;;
         *)
-            err_log_to_file "Unsupport archive type"
+            err_log "$SYS_MSG_FILE_ERROR"
     esac
 }
 
@@ -248,7 +248,7 @@ extract_data(){
 extract_config(){
     if [ -f $SYS_QPKG_DATA_CONFIG_FILE ]; then
         echo "[$QPKG_NAME][$(date)] Extract config $SYS_QPKG_DATA_CONFIG_FILE..." >> $LOG_INSTALL_DEBUG
-        $CMD_TAR xvf $SYS_QPKG_DATA_CONFIG_FILE -C / 2>>$LOG_INSTALL_DEBUG | $CMD_SED 's/\.//' 2>$LOG_INSTALL_DEBUG >>$SYS_QPKG_DIR/.list || err_log_to_file "Config Extract Failed"
+        $CMD_TAR xvf $SYS_QPKG_DATA_CONFIG_FILE -C / 2>>$LOG_INSTALL_DEBUG | $CMD_SED 's/\.//' 2>$LOG_INSTALL_DEBUG >>$SYS_QPKG_DIR/.list || err_log "$SYS_MSG_FILE_ERROR"
     fi
 }
 
